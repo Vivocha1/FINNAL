@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#102c2a"><title>FINNAL · Financial wellness</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;color:#172523;background:#f3f6f4;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:11px 15px;background:#126b57;color:white;font-weight:650}button.secondary{background:#e6efeb;color:#175847}button:disabled{opacity:.55;cursor:not-allowed}
+header{background:#102c2a;color:#f4faf7;padding:18px max(20px,calc((100vw - 1080px)/2));display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:850;letter-spacing:.08em;font-size:20px}.brand span{color:#84c9a7}.tag{font-size:12px;color:#bad0c7}
+main{max-width:1080px;margin:32px auto;padding:0 20px}.hidden{display:none!important}.panel{background:white;border:1px solid #e1e9e4;border-radius:17px;padding:22px;box-shadow:0 8px 28px #12352b0a;margin-bottom:18px}
+.auth{max-width:520px;margin:40px auto}.auth h1{font-size:28px;margin:0 0 7px}.muted{color:#64756e;font-size:14px}.tabs{display:flex;gap:8px;margin:18px 0}.tabs button{flex:1}.tabs .active{background:#102c2a}
+label{display:block;font-size:13px;font-weight:650;margin:13px 0 6px}input,select{width:100%;border:1px solid #d8e3dc;border-radius:9px;padding:12px;background:#fff;color:#172523}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.stat{background:#f6faf7;border-radius:13px;padding:17px}.stat small{color:#6b7c74}.stat strong{display:block;font-size:25px;margin-top:6px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}.row h2{margin:0;font-size:20px}.two{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+form .actions{margin-top:17px;display:flex;gap:8px;flex-wrap:wrap}.tx{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #edf1ee}.tx:last-child{border-bottom:0}.positive{color:#137553}.negative{color:#bb5748}
+.notice{padding:12px;border-radius:10px;background:#f0f6f1;color:#36584c;font-size:13px;margin-top:12px}.error{background:#fff0ed;color:#9e3b2b}
+footer{text-align:center;color:#819089;font-size:12px;padding:25px}
+@media(max-width:740px){main{margin:20px auto}.grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}.panel{padding:17px}header{padding:16px 20px}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">FINN<span>AL</span></div><div class="tag">Financial wellness at work</div></div><div class="tag" id="headerUser">EMPLOYEE + EMPLOYER</div></header>
+<main>
+<section id="auth" class="auth panel">
+<h1>Build healthier money habits.</h1><p class="muted">A private space to understand cash flow, plan spending and build savings.</p>
+<div class="tabs"><button id="loginTab" class="active" onclick="showAuth('login')">Sign in</button><button id="registerTab" class="secondary" onclick="showAuth('register')">Employee sign up</button><button id="employerTab" class="secondary" onclick="showAuth('employer')">Employer setup</button></div>
+<form id="loginForm"><label>Email</label><input name="email" type="email" required autocomplete="email"><label>Password</label><input name="password" type="password" required autocomplete="current-password"><div class="actions"><button>Sign in</button></div></form>
+<form id="registerForm" class="hidden"><label>Employer code</label><input name="company_code" required><label>Your name</label><input name="name" required><label>Email</label><input name="email" type="email" required><label>Password (12+ characters)</label><input name="password" type="password" minlength="12" required><div class="actions"><button>Create employee account</button></div></form>
+<form id="employerForm" class="hidden"><label>Bootstrap secret</label><input name="bootstrap_secret" type="password" required><label>Company name</label><input name="company_name" required><label>Company code (share only with invited employees)</label><input name="company_code" required><label>Admin name</label><input name="admin_name" required><label>Admin email</label><input name="email" type="email" required><label>Password (12+ characters)</label><input name="password" type="password" minlength="12" required><div class="actions"><button>Create employer workspace</button></div><p class="muted">One-time setup for a controlled pilot. Keep your bootstrap secret private.</p></form>
+<div id="authMessage" class="notice hidden"></div>
+</section>
+
+<section id="dashboard" class="hidden">
+<div class="row" style="margin:10px 0 18px"><div><h1 id="welcome" style="margin:0;font-size:27px">Welcome</h1><div id="companyName" class="muted"></div></div><button class="secondary" onclick="logout()">Sign out</button></div>
+<div id="employeeView">
+<div class="grid">
+<div class="stat"><small>Income recorded</small><strong id="income">₹0</strong></div>
+<div class="stat"><small>Expenses recorded</small><strong id="expenses">₹0</strong></div>
+<div class="stat"><small>Net cash flow</small><strong id="net">₹0</strong></div>
+</div>
+<div class="two" style="margin-top:16px">
+<section class="panel"><h2>Record a transaction</h2><form id="txForm"><label>Description</label><input name="description" placeholder="e.g. Monthly groceries" maxlength="160" required><label>Amount (₹)</label><input name="amount" type="number" min="0.01" step="0.01" required><label>Type</label><select name="kind"><option value="expense">Expense</option><option value="income">Income</option></select><label>Category</label><select name="category"><option>Food</option><option>Rent</option><option>Transport</option><option>Health</option><option>Education</option><option>Salary</option><option>Savings</option><option>Other</option></select><label>Date</label><input name="occurred_on" type="date" required><div class="actions"><button>Save transaction</button></div></form></section>
+<section class="panel"><div class="row"><h2>Your activity</h2><button class="secondary" onclick="refreshEmployee()">Refresh</button></div><div id="transactions" class="muted" style="margin-top:12px">No transactions yet.</div></section>
+</div>
+<div class="notice">Your entries are visible to your account. Employer views show only cohort-level activity after the minimum group size is reached. This pilot does not connect to bank accounts or payroll.</div>
+</div>
+<div id="employerView" class="hidden">
+<section class="panel"><div class="row"><div><h2>Workforce financial wellness</h2><p class="muted">Cohort-level adoption indicators only. Individual transactions are never shown here.</p></div><button class="secondary" onclick="refreshEmployer()">Refresh</button></div><div id="employerMetrics" style="margin-top:16px"></div></section>
+<div class="notice">The employer dashboard is designed for aggregate programme insights, not employee-level financial monitoring. Cohort-size suppression is a basic safeguard, not a guarantee of anonymity.</div>
+</div>
+</section>
+</main>
+<footer>FINNAL · Pilot software · Do not enter real financial data until security and compliance reviews are complete.</footer>
+<script>
+const $=id=>document.getElementById(id);
+let token=localStorage.getItem('finnal_token')||'', role=localStorage.getItem('finnal_role')||'';
+function money(paise){return new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format((paise||0)/100)}
+function message(id,text,isError=false){$(id).textContent=text;$(id).classList.remove('hidden','error');if(isError)$(id).classList.add('error')}
+function showAuth(mode){['login','register','employer'].forEach(x=>{$(x+'Form').classList.toggle('hidden',x!==mode);$(x+'Tab').className=x===mode?'active':'secondary'});$('authMessage').classList.add('hidden')}
+async function api(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization='Bearer '+token;const res=await fetch(path,{...options,headers});const data=await res.json().catch(()=>({detail:'Unexpected server response'}));if(!res.ok)throw Error(data.detail||'Request failed');return data}
+function setSession(data){token=data.access_token;role=data.role;localStorage.setItem('finnal_token',token);localStorage.setItem('finnal_role',role);openDashboard()}
+async function authSubmit(formId,path){const form=$(formId);form.addEventListener('submit',async e=>{e.preventDefault();const body=Object.fromEntries(new FormData(form));try{const data=await api(path,{method:'POST',body:JSON.stringify(body)});setSession(data)}catch(err){message('authMessage',err.message,true)}})}
+authSubmit('loginForm','/api/login');authSubmit('registerForm','/api/register');authSubmit('employerForm','/api/bootstrap-employer');
+function logout(){token='';role='';localStorage.removeItem('finnal_token');localStorage.removeItem('finnal_role');$('dashboard').classList.add('hidden');$('auth').classList.remove('hidden');$('headerUser').textContent='EMPLOYEE + EMPLOYER';showAuth('login')}
+async function openDashboard(){try{const me=await api('/api/me');$('auth').classList.add('hidden');$('dashboard').classList.remove('hidden');$('welcome').textContent='Hello, '+me.name;$('companyName').textContent=me.company;$('headerUser').textContent=me.role==='employee'?'EMPLOYEE':'EMPLOYER ADMIN';$('employeeView').classList.toggle('hidden',me.role!=='employee');$('employerView').classList.toggle('hidden',me.role!=='employer_admin');if(me.role==='employee')await refreshEmployee();else await refreshEmployer()}catch(e){logout();message('authMessage',e.message,true)}}
+async function refreshEmployee(){const [summary,rows]=await Promise.all([api('/api/overview'),api('/api/transactions')]);$('income').textContent=money(summary.income_paise);$('expenses').textContent=money(summary.expense_paise);$('net').textContent=money(summary.net_paise);$('transactions').innerHTML=rows.length?rows.map(r=>'<div class="tx"><div><b>'+escapeHtml(r.description)+'</b><div class="muted">'+escapeHtml(r.category)+' · '+r.occurred_on+'</div></div><b class="'+(r.kind==='income'?'positive':'negative')+'">'+(r.kind==='income'?'+':'−')+money(r.amount_paise)+'</b></div>').join(''):'No transactions yet. Add your first entry.'}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('txForm').addEventListener('submit',async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));try{await api('/api/transactions',{method:'POST',body:JSON.stringify({description:f.description,amount_paise:Math.round(Number(f.amount)*100),kind:f.kind,category:f.category,occurred_on:f.occurred_on||new Date().toISOString().slice(0,10)})});e.target.reset();await refreshEmployee()}catch(err){alert(err.message)}})
+async function refreshEmployer(){const d=await api('/api/employer/overview');if(d.suppressed){$('employerMetrics').innerHTML='<div class="notice">'+escapeHtml(d.message)+' Current eligible employee count: '+d.employee_count+'.</div>';return}$('employerMetrics').innerHTML='<div class="grid"><div class="stat"><small>Employees</small><strong>'+d.employee_count+'</strong></div><div class="stat"><small>Employees with activity</small><strong>'+d.employees_with_activity+'</strong></div><div class="stat"><small>Activity rate</small><strong>'+d.activity_rate+'%</strong></div></div><p class="muted">Recorded transactions: '+d.transaction_count+'</p>'}
+if(token)openDashboard();
+</script>
+</body></html>
