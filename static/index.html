@@ -70,5 +70,6 @@ function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':
 $('txForm').addEventListener('submit',async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));try{await api('/api/transactions',{method:'POST',body:JSON.stringify({description:f.description,amount_paise:Math.round(Number(f.amount)*100),kind:f.kind,category:f.category,occurred_on:f.occurred_on||new Date().toISOString().slice(0,10)})});e.target.reset();await refreshEmployee()}catch(err){alert(err.message)}})
 async function refreshEmployer(){const d=await api('/api/employer/overview');if(d.suppressed){$('employerMetrics').innerHTML='<div class="notice">'+escapeHtml(d.message)+' Current eligible employee count: '+d.employee_count+'.</div>';return}$('employerMetrics').innerHTML='<div class="grid"><div class="stat"><small>Employees</small><strong>'+d.employee_count+'</strong></div><div class="stat"><small>Employees with activity</small><strong>'+d.employees_with_activity+'</strong></div><div class="stat"><small>Activity rate</small><strong>'+d.activity_rate+'%</strong></div></div><p class="muted">Recorded transactions: '+d.transaction_count+'</p>'}
 if(token)openDashboard();
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
 </script>
 </body></html>
