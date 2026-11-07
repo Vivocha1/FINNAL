@@ -176,14 +176,24 @@ async function refreshGoals(){
   const goals=data.goals||[];
   $('goalsList').innerHTML=goals.length?goals.map(g=>{
     const pct=Math.min(100,Math.max(0,g.progress_pct));
-    return '<div class="money-card"><div class="row"><h3>'+escapeHtml(g.name)+'</h3><button class="tiny remove" onclick="deleteGoal('+g.id+')">Remove</button></div>'+
+    return '<div class="money-card"><div class="row"><h3>'+escapeHtml(g.name)+'</h3><div><button class="tiny secondary" onclick="toggleGoalEdit('+g.id+')">Edit</button> <button class="tiny remove" onclick="deleteGoal('+g.id+')">Remove</button></div></div>'+
       '<div class="sub">'+money(g.saved_paise)+' saved of '+money(g.target_paise)+'</div>'+
       '<div class="progress"><i style="width:'+pct+'%"></i></div>'+
       '<div class="row"><span class="budget-status ok">'+(g.is_completed?'Goal completed':money(g.remaining_paise)+' to go')+'</span><span class="sub">'+pct+'%</span></div>'+
       (g.due_date?'<div class="sub">Target date: '+g.due_date+'</div>':'')+
+      '<form id="goal-edit-'+g.id+'" class="inline-form hidden" onsubmit="saveGoalEdit(event,'+g.id+')"><div class="field"><label>Goal name</label><input name="name" value="'+escapeHtml(g.name)+'" maxlength="120" required></div><div class="field"><label>Target (₹)</label><input name="target" type="number" min="1" step="0.01" value="'+(g.target_paise/100).toFixed(2)+'" required></div><div class="field"><label>Target date</label><input name="due_date" type="date" value="'+(g.due_date||'')+'"></div><button class="tiny">Save changes</button></form>'+
       '<form class="inline-form" onsubmit="addContribution(event,'+g.id+')"><div class="field"><label>Contribution (₹)</label><input name="amount" type="number" min="0.01" step="0.01" required></div><div class="field"><label>Note (optional)</label><input name="note" maxlength="160" placeholder="Monthly saving"></div><button class="tiny">Record contribution</button></form>'+
       '<button class="tiny secondary" style="margin-top:8px" onclick="toggleHistory('+g.id+')">Contribution history</button><div id="history-'+g.id+'" class="muted hidden" style="margin-top:7px"></div></div>';
   }).join(''):'<p class="muted">No savings goals yet. Create a goal to start tracking progress.</p>';
+}
+function toggleGoalEdit(id){$('goal-edit-'+id).classList.toggle('hidden')}
+async function saveGoalEdit(event,id){
+  event.preventDefault();
+  const f=Object.fromEntries(new FormData(event.currentTarget));
+  try{
+    await api('/api/savings-goals/'+id,{method:'PUT',body:JSON.stringify({name:f.name,target_paise:Math.round(Number(f.target)*100),due_date:f.due_date||null})});
+    await refreshGoals();
+  }catch(e){alert(e.message)}
 }
 $('budgetForm').addEventListener('submit',async e=>{
   e.preventDefault();const f=Object.fromEntries(new FormData(e.target));
@@ -223,10 +233,19 @@ async function toggleHistory(id){
   if(!box.classList.contains('hidden')){box.classList.add('hidden');return}
   try{
     const data=await api('/api/savings-goals/'+id+'/contributions');
-    box.innerHTML=(data.contributions||[]).length?data.contributions.map(c=>'<div class="tx"><span>'+c.contributed_on+(c.note?' · '+escapeHtml(c.note):'')+'</span><b class="positive">+'+money(c.amount_paise)+'</b></div>').join(''):'No contributions recorded yet.';
+    box.innerHTML=(data.contributions||[]).length?data.contributions.map(c=>'<div class="tx"><span>'+c.contributed_on+(c.note?' · '+escapeHtml(c.note):'')+'</span><span><b class="positive">+'+money(c.amount_paise)+'</b> <button class="tiny remove" onclick="removeContribution('+id+','+c.id+')">Remove</button></span></div>').join(''):'No contributions recorded yet.';
     box.classList.remove('hidden');
   }catch(e){box.textContent=e.message;box.classList.remove('hidden')}
 }
+async function removeContribution(goalId,contributionId){
+  if(!confirm('Remove this contribution and reduce goal progress?'))return;
+  try{
+    await api('/api/savings-goals/'+goalId+'/contributions/'+contributionId,{method:'DELETE'});
+    await refreshGoals();
+    await toggleHistory(goalId);
+  }catch(e){alert(e.message)}
+}
+
 
 if(token)openDashboard();
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
