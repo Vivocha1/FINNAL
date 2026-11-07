@@ -7,7 +7,7 @@ from fastapi import FastAPI, Depends, HTTPException, Header, status
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field
 from jose import jwt, JWTError
-from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime, ForeignKey, func
+from sqlalchemy import create_engine, Column, Integer, String, Date, DateTime, ForeignKey, func, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 APP_SECRET = os.getenv("JWT_SECRET", "local-development-only-change-this-secret")
@@ -139,7 +139,7 @@ def health():
 @app.get("/readyz")
 def readyz(db: Session = Depends(db_session)):
     try:
-        db.execute(func.count(Company.id)).scalar()
+        db.execute(text("SELECT 1")).scalar_one()
         return {"status": "ready", "database": "reachable"}
     except Exception:
         raise HTTPException(503, "Database unavailable")
