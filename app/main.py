@@ -849,11 +849,27 @@ def advisor_employee_detail(employee_id: int, user: User = Depends(require_advis
     payroll = db.query(PayrollEntry).filter_by(company_id=user.company_id, user_id=target.id).order_by(
         PayrollEntry.month.desc()).limit(12).all()
     assets = db.query(PortfolioAsset).filter_by(company_id=user.company_id, user_id=target.id).all()
-    txs = db.query(Transaction).filter_by(company_id=user.company_id, user_id=target.id).all()
+    txs = db.query(Transaction).filter_by(company_id=user.company_id, user_id=target.id).order_by(
+        Transaction.occurred_on.desc(), Transaction.id.desc()).limit(100).all()
+    budget_rows = db.query(Budget).filter_by(company_id=user.company_id, user_id=target.id).order_by(
+        Budget.month.desc(), Budget.category.asc()).limit(36).all()
+    budget_data = []
+    for budget in budget_rows:
+        spent = db.query(func.coalesce(func.sum(Transaction.amount_paise), 0)).filter(
+            Transaction.company_id == user.company_id, Transaction.user_id == target.id,
+            Transaction.kind == "expense", Transaction.category == budget.category,
+            Transaction.occurred_on >= budget.month,
+            Transaction.occurred_on < month_after(budget.month)
+        ).scalar() or 0
+        budget_data.append({"category": budget.category, "month": budget.month.strftime("%Y-%m"),
+            "limit_paise": budget.limit_paise, "spent_paise": int(spent),
+            "remaining_paise": budget.limit_paise - int(spent)})
     write_audit(db, user, target, "advisor_viewed_financial_profile")
     return {"employee": {"id": target.id, "name": target.name, "email": target.email},
         "profile": profile_result(profile), "payroll": [payroll_result(row) for row in payroll],
-        "assets": [asset_result(row) for row in assets],
+        "assets": [asset_result(row) for row in assets], "budgets": budget_data,
+        "transactions": [{"description": x.description, "amount_paise": x.amount_paise,
+            "kind": x.kind, "category": x.category, "occurred_on": x.occurred_on.isoformat()} for x in txs],
         "cashflow": {"transactions": len(txs),
             "income_paise": sum(x.amount_paise for x in txs if x.kind == "income"),
             "expense_paise": sum(x.amount_paise for x in txs if x.kind == "expense")}}
