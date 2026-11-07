@@ -341,7 +341,11 @@ async function selectAdvisorEmployee(id) {
       (gross?'<h4 style="margin:16px 0 7px">Latest payroll · '+escapeHtml(gross.month)+'</h4><div class="metric-line"><span>Gross salary</span><b>'+money(gross.gross_salary_paise)+'</b></div><div class="metric-line"><span>Deductions</span><b>'+money(gross.total_deductions_paise)+'</b></div><div class="metric-line"><span>Deposited (employee-entered)</span><b>'+money(gross.deposited_paise)+'</b></div>':'<p class="muted">No payroll record shared.</p>')+
       '<h4 style="margin:16px 0 7px">Portfolio holdings</h4>'+
       ((d.assets||[]).length?d.assets.map(a=>'<div class="metric-line"><span>'+escapeHtml(a.name)+' · '+escapeHtml(a.asset_type)+'</span><b>'+money(a.current_value_paise)+'</b></div>').join(''):'<p class="muted">No holdings recorded.</p>')+
-      '<p class="muted" style="margin-top:12px">Cash-flow entries: '+d.cashflow.transactions+'. Viewed access is recorded for audit purposes.</p>';
+      '<h4 style="margin:16px 0 7px">Category budgets</h4>'+
+      ((d.budgets||[]).length?d.budgets.map(b=>'<div class="metric-line"><span>'+escapeHtml(b.month)+' · '+escapeHtml(b.category)+' · spent '+money(b.spent_paise)+'</span><b>'+money(b.remaining_paise)+' left</b></div>').join(''):'<p class="muted">No budgets recorded.</p>')+
+      '<h4 style="margin:16px 0 7px">Recent transactions (consented)</h4>'+
+      ((d.transactions||[]).length?d.transactions.slice(0,12).map(t=>'<div class="metric-line"><span>'+escapeHtml(t.occurred_on)+' · '+escapeHtml(t.description)+' <small>('+escapeHtml(t.category)+')</small></span><b class="'+(t.kind==='income'?'positive':'negative')+'">'+(t.kind==='income'?'+':'−')+money(t.amount_paise)+'</b></div>').join(''):'<p class="muted">No transactions recorded.</p>')+
+      '<p class="muted" style="margin-top:12px">Cash-flow entries: '+d.cashflow.transactions+'. Detailed access is consent-based and recorded for audit purposes.</p>';
   } catch(error) {
     $('advisorClientDetail').textContent=error.message; $('advisorySubmit').disabled=true;
   }
