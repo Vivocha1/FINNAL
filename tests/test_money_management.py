@@ -238,3 +238,132 @@ def test_employer_insights_are_suppressed_below_minimum_cohort():
     assert payload["suppressed"] is True
     assert "budget_adoption_rate" not in payload
     assert "savings_goal_adoption_rate" not in payload
+
+
+def test_payroll_portfolio_consent_advisory_and_credit_review_workflow():
+    admin = create_employer("FINANCEOS", "admin-financeos@example.com")
+    admin_headers = auth(admin["access_token"])
+    employee = create_employee("FINANCEOS", "employee-financeos@example.com")
+    employee_headers = auth(employee["access_token"])
+
+    advisor_created = client.post("/api/employer/advisors", headers=admin_headers, json={
+        "name": "FINNAL Professional", "email": "advisor-financeos@example.com",
+        "password": "StrongAdvisorPassword123!"
+    })
+    assert advisor_created.status_code == 201, advisor_created.text
+    advisor_login = client.post("/api/login", json={
+        "email": "advisor-financeos@example.com", "password": "StrongAdvisorPassword123!"
+    })
+    assert advisor_login.status_code == 200
+    advisor_headers = auth(advisor_login.json()["access_token"])
+
+    payroll = client.post("/api/payroll", headers=employee_headers, json={
+        "month": "2026-11", "base_salary_paise": 3_000_000,
+        "other_earnings_paise": 100_000, "overtime_paise": 50_000,
+        "pf_deduction_paise": 180_000, "tax_deduction_paise": 50_000,
+        "other_deductions_paise": 20_000, "deposited_paise": 2_900_000,
+        "deposit_date": "2026-11-07", "notes": "Manual payslip entry"
+    })
+    assert payroll.status_code == 201, payroll.text
+    assert payroll.json()["gross_salary_paise"] == 3_150_000
+    assert payroll.json()["total_deductions_paise"] == 250_000
+    assert payroll.json()["net_salary_paise"] == 2_900_000
+    assert payroll.json()["verification"] == "employee_entered_unverified"
+
+    invalid_payroll = client.post("/api/payroll", headers=employee_headers, json={
+        "month": "2026-12", "base_salary_paise": 100_000,
+        "pf_deduction_paise": 90_000, "tax_deduction_paise": 20_000
+    })
+    assert invalid_payroll.status_code == 422
+
+    asset = client.post("/api/portfolio/assets", headers=employee_headers, json={
+        "asset_type": "mutual_fund", "name": "Demo Index Fund",
+        "institution": "Demo AMC", "invested_paise": 500_000,
+        "current_value_paise": 525_000, "risk_band": "moderate",
+        "as_of_date": "2026-11-07"
+    })
+    assert asset.status_code == 201, asset.text
+
+    # Advisor must not see this employee until the employee explicitly consents.
+    assert client.get("/api/advisor/employees", headers=advisor_headers).json()["employees"] == []
+    denied = client.get(f"/api/advisor/employees/{employee['access_token']}", headers=advisor_headers)
+    assert denied.status_code in (404, 422)
+
+    profile = client.put("/api/financial-profile", headers=employee_headers, json={
+        "monthly_essential_paise": 1_500_000, "emergency_fund_paise": 300_000,
+        "dependents_count": 2, "risk_appetite": "moderate",
+        "primary_goal": "Build emergency fund", "share_with_advisor": True
+    })
+    assert profile.status_code == 200
+    assert profile.json()["share_with_advisor"] is True
+
+    directory = client.get("/api/advisor/employees", headers=advisor_headers)
+    assert directory.status_code == 200
+    assert directory.json()["employees"][0]["id"] == client.get(
+        "/api/me", headers=employee_headers).json()["id"]
+
+    employee_id = directory.json()["employees"][0]["id"]
+    detail = client.get(f"/api/advisor/employees/{employee_id}", headers=advisor_headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["profile"]["emergency_fund_paise"] == 300_000
+    assert detail.json()["payroll"][0]["deposited_paise"] == 2_900_000
+    assert len(detail.json()["assets"]) == 1
+
+    advisory = client.post(f"/api/advisor/employees/{employee_id}/advisories",
+        headers=advisor_headers, json={
+            "title": "Build your emergency reserve",
+            "message": "Consider prioritising a liquid emergency reserve before increasing market exposure.",
+            "topic": "planning"
+        })
+    assert advisory.status_code == 201, advisory.text
+    messages = client.get("/api/advisories", headers=employee_headers)
+    assert messages.status_code == 200
+    message_id = messages.json()["messages"][0]["id"]
+    assert client.post(f"/api/advisories/{message_id}/read", headers=employee_headers).status_code == 200
+
+    loan = client.post("/api/loan-requests", headers=employee_headers, json={
+        "requested_amount_paise": 500_000, "purpose": "Education",
+        "notes": "Preliminary review requested"
+    })
+    assert loan.status_code == 201, loan.text
+    queue = client.get("/api/advisor/loan-requests", headers=advisor_headers)
+    assert queue.status_code == 200 and len(queue.json()["requests"]) == 1
+    request_id = queue.json()["requests"][0]["id"]
+    review = client.patch(f"/api/advisor/loan-requests/{request_id}", headers=advisor_headers,
+        json={"status": "under_review", "indicative_amount_paise": 400_000,
+              "advisor_note": "Subject to partner underwriting and verification"})
+    assert review.status_code == 200
+    own_requests = client.get("/api/loan-requests", headers=employee_headers).json()["requests"]
+    assert own_requests[0]["status"] == "under_review"
+    assert own_requests[0]["indicative_amount_paise"] == 400_000
+
+    # Withdrawing consent removes advisor visibility.
+    revoked = client.put("/api/financial-profile", headers=employee_headers, json={
+        "monthly_essential_paise": 1_500_000, "emergency_fund_paise": 300_000,
+        "dependents_count": 2, "risk_appetite": "moderate",
+        "primary_goal": "Build emergency fund", "share_with_advisor": False
+    })
+    assert revoked.status_code == 200
+    assert revoked.json()["share_with_advisor"] is False
+    assert client.get(f"/api/advisor/employees/{employee_id}", headers=advisor_headers).status_code == 404
+
+
+def test_advisor_cannot_read_other_company_employee_even_with_consent():
+    admin_one = create_employer("ADVCOMPANY1", "admin-adv1@example.com")
+    admin_two = create_employer("ADVCOMPANY2", "admin-adv2@example.com")
+    employee_two = create_employee("ADVCOMPANY2", "employee-adv2@example.com")
+    client.put("/api/financial-profile", headers=auth(employee_two["access_token"]), json={
+        "monthly_essential_paise": 100000, "emergency_fund_paise": 100000,
+        "dependents_count": 0, "risk_appetite": "conservative",
+        "primary_goal": "Emergency fund", "share_with_advisor": True
+    })
+    client.post("/api/employer/advisors", headers=auth(admin_one["access_token"]), json={
+        "name": "Advisor One", "email": "advisor-one@example.com",
+        "password": "StrongAdvisorPassword123!"
+    })
+    advisor = client.post("/api/login", json={
+        "email": "advisor-one@example.com", "password": "StrongAdvisorPassword123!"
+    }).json()
+    employee_id = client.get("/api/me", headers=auth(employee_two["access_token"])).json()["id"]
+    response = client.get(f"/api/advisor/employees/{employee_id}", headers=auth(advisor["access_token"]))
+    assert response.status_code == 404
