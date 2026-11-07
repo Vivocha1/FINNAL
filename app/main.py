@@ -250,6 +250,37 @@ def add_transaction(body: TransactionIn, user: User = Depends(employee),
     db.add(row); db.commit(); db.refresh(row)
     return {"id": row.id, "message": "Transaction saved"}
 
+@app.put("/api/transactions/{transaction_id}")
+def update_transaction(transaction_id: int, body: TransactionIn,
+                       user: User = Depends(employee), db: Session = Depends(db_session)):
+    if body.kind not in ("income", "expense"):
+        raise HTTPException(422, "kind must be income or expense")
+    row = db.query(Transaction).filter(
+        Transaction.id == transaction_id,
+        Transaction.company_id == user.company_id,
+        Transaction.user_id == user.id
+    ).first()
+    if not row:
+        raise HTTPException(404, "Transaction not found")
+    for key, value in body.model_dump().items():
+        setattr(row, key, value)
+    db.commit()
+    return {"id": row.id, "message": "Transaction updated"}
+
+@app.delete("/api/transactions/{transaction_id}")
+def delete_transaction(transaction_id: int, user: User = Depends(employee),
+                       db: Session = Depends(db_session)):
+    row = db.query(Transaction).filter(
+        Transaction.id == transaction_id,
+        Transaction.company_id == user.company_id,
+        Transaction.user_id == user.id
+    ).first()
+    if not row:
+        raise HTTPException(404, "Transaction not found")
+    db.delete(row)
+    db.commit()
+    return {"message": "Transaction removed"}
+
 @app.get("/api/overview")
 def overview(user: User = Depends(employee), db: Session = Depends(db_session)):
     rows = db.query(Transaction).filter(Transaction.company_id == user.company_id,
