@@ -15,7 +15,7 @@ FINNAL is an early-stage MVP for MSME employee financial wellness. This public r
 **Employer**
 - Create a company workspace and first employer-admin account through a bootstrap flow.
 - Share the company code with employees during a controlled pilot.
-- View cohort-level employee activity. Metrics are suppressed until the configured minimum cohort size is reached (default 10).
+- View cohort-level employee activity, including adoption of budgeting and savings-goal tools. Metrics are suppressed until the configured minimum cohort size is reached (default 10); no employee-level transaction data or balances are shown.
 
 **Platform**
 - SQLAlchemy-backed PostgreSQL on Render; SQLite for local development.
