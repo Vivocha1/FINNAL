@@ -276,6 +276,14 @@ def test_payroll_portfolio_consent_advisory_and_credit_review_workflow():
     })
     assert invalid_payroll.status_code == 422
 
+    client.post("/api/transactions", headers=employee_headers, json={
+        "description": "Monthly groceries", "amount_paise": 120000, "kind": "expense",
+        "category": "Food", "occurred_on": "2026-11-07"
+    })
+    client.post("/api/budgets", headers=employee_headers, json={
+        "category": "Food", "month": "2026-11", "limit_paise": 250000
+    })
+
     asset = client.post("/api/portfolio/assets", headers=employee_headers, json={
         "asset_type": "mutual_fund", "name": "Demo Index Fund",
         "institution": "Demo AMC", "invested_paise": 500_000,
@@ -308,6 +316,8 @@ def test_payroll_portfolio_consent_advisory_and_credit_review_workflow():
     assert detail.json()["profile"]["emergency_fund_paise"] == 300_000
     assert detail.json()["payroll"][0]["deposited_paise"] == 2_900_000
     assert len(detail.json()["assets"]) == 1
+    assert detail.json()["budgets"][0]["spent_paise"] == 120000
+    assert detail.json()["transactions"][0]["description"] == "Monthly groceries"
 
     advisory = client.post(f"/api/advisor/employees/{employee_id}/advisories",
         headers=advisor_headers, json={
