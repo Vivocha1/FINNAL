@@ -24,12 +24,16 @@ engine = create_engine(DATABASE_URL, pool_pre_ping=True,
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
+def utcnow_naive():
+    # Store UTC timestamps as naive values for compatibility with existing DateTime columns.
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
 class Company(Base):
     __tablename__ = "companies"
     id = Column(Integer, primary_key=True)
     name = Column(String(160), nullable=False)
     code = Column(String(48), unique=True, index=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow_naive, nullable=False)
 
 class User(Base):
     __tablename__ = "users"
@@ -39,7 +43,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), default="employee", nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow_naive, nullable=False)
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -51,7 +55,7 @@ class Transaction(Base):
     kind = Column(String(12), nullable=False)
     category = Column(String(48), default="Other", nullable=False)
     occurred_on = Column(Date, default=date.today, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow_naive, nullable=False)
 
 class Budget(Base):
     __tablename__ = "budgets"
@@ -63,8 +67,8 @@ class Budget(Base):
     category = Column(String(48), nullable=False)
     month = Column(Date, nullable=False)
     limit_paise = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow_naive, nullable=False)
+    updated_at = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive, nullable=False)
 
 class SavingsGoal(Base):
     __tablename__ = "savings_goals"
@@ -75,7 +79,7 @@ class SavingsGoal(Base):
     target_paise = Column(Integer, nullable=False)
     saved_paise = Column(Integer, default=0, nullable=False)
     due_date = Column(Date, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow_naive, nullable=False)
 
 class GoalContribution(Base):
     __tablename__ = "goal_contributions"
@@ -86,7 +90,7 @@ class GoalContribution(Base):
     amount_paise = Column(Integer, nullable=False)
     note = Column(String(160), default="", nullable=False)
     contributed_on = Column(Date, default=date.today, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow_naive, nullable=False)
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="FINNAL API", version="0.1.0",
