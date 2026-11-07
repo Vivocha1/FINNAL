@@ -10,7 +10,7 @@ os.environ["JWT_SECRET"] = "test-only-jwt-secret-keep-this-long-enough-for-ci"
 os.environ["BOOTSTRAP_SECRET"] = "test-only-bootstrap-secret"
 os.environ["EMPLOYER_MIN_COHORT"] = "2"
 
-from fastapi.comclient import TestClient
+from fastapi.testclient import TestClient
 from app.main import app
 
 client = TestClient(app)
