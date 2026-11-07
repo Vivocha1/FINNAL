@@ -502,9 +502,22 @@ def employer_overview(user: User = Depends(employer), db: Session = Depends(db_s
     tx_count = db.query(Transaction).filter(Transaction.company_id == user.company_id).count()
     active_count = db.query(func.count(func.distinct(Transaction.user_id))).filter(
         Transaction.company_id == user.company_id).scalar() or 0
-    return {"suppressed": False, "employee_count": count, "employees_with_activity": active_count,
-        "transaction_count": tx_count, "activity_rate": round(active_count / count * 100, 1),
-        "privacy_note": "Only cohort-level indicators are returned; no individual transaction details."}
+    employees_with_budgets = db.query(func.count(func.distinct(Budget.user_id))).filter(
+        Budget.company_id == user.company_id).scalar() or 0
+    employees_with_savings_goals = db.query(func.count(func.distinct(SavingsGoal.user_id))).filter(
+        SavingsGoal.company_id == user.company_id).scalar() or 0
+    return {
+        "suppressed": False,
+        "employee_count": count,
+        "employees_with_activity": active_count,
+        "employees_with_budgets": employees_with_budgets,
+        "employees_with_savings_goals": employees_with_savings_goals,
+        "transaction_count": tx_count,
+        "activity_rate": round(active_count / count * 100, 1),
+        "budget_adoption_rate": round(employees_with_budgets / count * 100, 1),
+        "savings_goal_adoption_rate": round(employees_with_savings_goals / count * 100, 1),
+        "privacy_note": "Only cohort-level indicators are returned; no individual records or financial amounts are disclosed."
+    }
 
 static_dir = Path(__file__).resolve().parent.parent / "static"
 if static_dir.exists():
