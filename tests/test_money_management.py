@@ -10,7 +10,7 @@ os.environ["JWT_SECRET"] = "test-only-jwt-secret-keep-this-long-enough-for-ci"
 os.environ["BOOTSTRAP_SECRET"] = "test-only-bootstrap-secret"
 os.environ["EMPLOYER_MIN_COHORT"] = "2"
 
-from fastapi.testclient import TestClient
+from fastapi.comclient import TestClient
 from app.main import app
 
 client = TestClient(app)
@@ -45,8 +45,8 @@ def auth(token: str):
 
 
 def test_budget_upsert_and_monthly_spending():
-    create_employer("BUDGETCO", "admin-budget@example.test")
-    employee = create_employee("BUDGETCO", "employee-budget@example.test")
+    create_employer("BUDGETCO", "admin-budget@example.com")
+    employee = create_employee("BUDGETCO", "employee-budget@example.com")
     headers = auth(employee["access_token"])
 
     created = client.post("/api/budgets", headers=headers, json={
@@ -81,8 +81,8 @@ def test_budget_upsert_and_monthly_spending():
 
 
 def test_savings_goal_contributions_and_history():
-    create_employer("SAVINGSCO", "admin-savings@example.test")
-    employee = create_employee("SAVINGSCO", "employee-savings@example.test")
+    create_employer("SAVINGSCO", "admin-savings@example.com")
+    employee = create_employee("SAVINGSCO", "employee-savings@example.com")
     headers = auth(employee["access_token"])
 
     goal = client.post("/api/savings-goals", headers=headers, json={
@@ -113,10 +113,10 @@ def test_savings_goal_contributions_and_history():
 
 
 def test_money_routes_require_employee_role_and_are_tenant_scoped():
-    employer = create_employer("TENANTONE", "admin-one@example.test")
-    employee_one = create_employee("TENANTONE", "employee-one@example.test")
-    create_employer("TENANTTWO", "admin-two@example.test")
-    employee_two = create_employee("TENANTTWO", "employee-two@example.test")
+    employer = create_employer("TENANTONE", "admin-one@example.com")
+    employee_one = create_employee("TENANTONE", "employee-one@example.com")
+    create_employer("TENANTTWO", "admin-two@example.com")
+    employee_two = create_employee("TENANTTWO", "employee-two@example.com")
 
     assert client.get("/api/budgets", headers=auth(employer["access_token"])).status_code == 403
     assert client.get("/api/employer/overview", headers=auth(employee_one["access_token"])).status_code == 403
@@ -132,7 +132,7 @@ def test_money_routes_require_employee_role_and_are_tenant_scoped():
 
 
 def test_invalid_month_is_rejected():
-    create_employer("DATECO", "admin-date@example.test")
-    employee = create_employee("DATECO", "employee-date@example.test")
+    create_employer("DATECO", "admin-date@example.com")
+    employee = create_employee("DATECO", "employee-date@example.com")
     response = client.get("/api/budgets?month=2026-13", headers=auth(employee["access_token"]))
     assert response.status_code == 422
