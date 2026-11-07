@@ -177,6 +177,11 @@ class SavingsGoalIn(BaseModel):
     target_paise: int = Field(gt=0, le=10_000_000_000)
     due_date: Optional[date] = None
 
+class SavingsGoalUpdateIn(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=2, max_length=120)
+    target_paise: Optional[int] = Field(default=None, gt=0, le=10_000_000_000)
+    due_date: Optional[date] = None
+
 class GoalContributionIn(BaseModel):
     amount_paise: int = Field(gt=0, le=1_000_000_000)
     note: str = Field(default="", max_length=160)
@@ -392,6 +397,31 @@ def create_savings_goal(body: SavingsGoalIn, user: User = Depends(employee),
     db.refresh(row)
     return goal_result(row)
 
+@app.put("/api/savings-goals/{goal_id}")
+def update_savings_goal(goal_id: int, body: SavingsGoalUpdateIn,
+                        user: User = Depends(employee), db: Session = Depends(db_session)):
+    row = db.query(SavingsGoal).filter(
+        SavingsGoal.id == goal_id, SavingsGoal.company_id == user.company_id,
+        SavingsGoal.user_id == user.id
+    ).first()
+    if not row:
+        raise HTTPException(404, "Savings goal not found")
+    updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(422, "Provide at least one field to update")
+    if "name" in updates:
+        cleaned = updates["name"].strip()
+        if not cleaned:
+            raise HTTPException(422, "Goal name cannot be blank")
+        row.name = cleaned
+    if "target_paise" in updates and updates["target_paise"] is not None:
+        row.target_paise = updates["target_paise"]
+    if "due_date" in updates:
+        row.due_date = updates["due_date"]
+    db.commit()
+    db.refresh(row)
+    return goal_result(row)
+
 @app.delete("/api/savings-goals/{goal_id}")
 def delete_savings_goal(goal_id: int, user: User = Depends(employee),
                         db: Session = Depends(db_session)):
@@ -421,6 +451,27 @@ def list_goal_contributions(goal_id: int, user: User = Depends(employee),
         "id": row.id, "amount_paise": row.amount_paise, "note": row.note,
         "contributed_on": row.contributed_on.isoformat()
     } for row in rows]}
+
+@app.delete("/api/savings-goals/{goal_id}/contributions/{contribution_id}")
+def delete_goal_contribution(goal_id: int, contribution_id: int,
+                             user: User = Depends(employee), db: Session = Depends(db_session)):
+    goal = db.query(SavingsGoal).filter(
+        SavingsGoal.id == goal_id, SavingsGoal.company_id == user.company_id,
+        SavingsGoal.user_id == user.id
+    ).first()
+    if not goal:
+        raise HTTPException(404, "Savings goal not found")
+    row = db.query(GoalContribution).filter(
+        GoalContribution.id == contribution_id, GoalContribution.goal_id == goal_id,
+        GoalContribution.company_id == user.company_id, GoalContribution.user_id == user.id
+    ).first()
+    if not row:
+        raise HTTPException(404, "Contribution not found")
+    goal.saved_paise = max(0, goal.saved_paise - row.amount_paise)
+    db.delete(row)
+    db.commit()
+    db.refresh(goal)
+    return {"goal": goal_result(goal), "message": "Contribution removed"}
 
 @app.post("/api/savings-goals/{goal_id}/contributions", status_code=201)
 def contribute_to_goal(goal_id: int, body: GoalContributionIn,
