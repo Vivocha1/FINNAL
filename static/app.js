@@ -61,7 +61,20 @@ async function removeTransaction(id){
   catch(err){alert(err.message)}
 }
 
-async function refreshEmployer(){const d=await api('/api/employer/overview');if(d.suppressed){$('employerMetrics').innerHTML='<div class="notice">'+escapeHtml(d.message)+' Current eligible employee count: '+d.employee_count+'.</div>';return}$('employerMetrics').innerHTML='<div class="grid"><div class="stat"><small>Employees</small><strong>'+d.employee_count+'</strong></div><div class="stat"><small>Employees with activity</small><strong>'+d.employees_with_activity+'</strong></div><div class="stat"><small>Activity rate</small><strong>'+d.activity_rate+'%</strong></div></div><p class="muted">Recorded transactions: '+d.transaction_count+'</p>'}
+async function refreshEmployer(){
+  const d=await api('/api/employer/overview');
+  if(d.suppressed){
+    $('employerMetrics').innerHTML='<div class="notice">'+escapeHtml(d.message)+' Current eligible employee count: '+d.employee_count+'.</div>';
+    return;
+  }
+  $('employerMetrics').innerHTML='<div class="grid">'+
+    '<div class="stat"><small>Employees</small><strong>'+d.employee_count+'</strong></div>'+
+    '<div class="stat"><small>Employees with activity</small><strong>'+d.employees_with_activity+'</strong></div>'+
+    '<div class="stat"><small>Activity rate</small><strong>'+d.activity_rate+'%</strong></div>'+
+    '<div class="stat"><small>Budget adoption</small><strong>'+d.budget_adoption_rate+'%</strong><small>'+d.employees_with_budgets+' employees</small></div>'+
+    '<div class="stat"><small>Savings goal adoption</small><strong>'+d.savings_goal_adoption_rate+'%</strong><small>'+d.employees_with_savings_goals+' employees</small></div>'+
+    '</div><p class="muted">Recorded transactions: '+d.transaction_count+'</p>';
+}
 
 function currentYM(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
 function initMoneyForms(){
