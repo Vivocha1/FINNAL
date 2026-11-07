@@ -6,10 +6,11 @@ FINNAL is an early-stage MVP for MSME employee financial wellness. This public r
 
 **Employee**
 - Create an account using an employer code and sign in.
-- Record income and expenses with category and date.
+- Record, edit and remove income/expense entries with category and date.
 - View personal recorded income, expenses, net cash flow and transaction history.
+- Review concise lessons on emergency funds, practical budgeting and the full cost of credit.
 - Set monthly category budgets; spending is calculated from expense entries in that calendar month, with remaining/over-budget indicators.
-- Create savings goals with optional target dates, add dated contributions, review contribution history and track completion progress.
+- Create and edit savings goals with optional target dates, add dated contributions, review/correct contribution history and track completion progress.
 
 **Employer**
 - Create a company workspace and first employer-admin account through a bootstrap flow.
@@ -19,7 +20,8 @@ FINNAL is an early-stage MVP for MSME employee financial wellness. This public r
 **Platform**
 - SQLAlchemy-backed PostgreSQL on Render; SQLite for local development.
 - PBKDF2-HMAC-SHA256 password hashing and short-lived signed JWT access tokens.
-- Tenant-scoped user and transaction queries.
+- Tenant-scoped user, transaction, budget and savings-goal queries.
+- PWA shell with app JavaScript split into a separately checked file.
 - Integer paise for monetary values (₹1,250.00 = 125000).
 - Health, readiness and OpenAPI endpoints.
 - Responsive PWA shell.
@@ -65,11 +67,11 @@ Review current pricing and resource sizing in the Render Dashboard before provis
 | POST | /api/register | Employee sign-up using company code |
 | POST | /api/login | Login |
 | GET | /api/me | Current account |
-| GET/POST | /api/transactions | Employee transaction history/create |
+| GET/POST/PUT/DELETE | /api/transactions | List, create, edit and remove employee transactions |
 | GET | /api/overview | Employee cash-flow totals |
 | GET/POST/DELETE | /api/budgets | Month-specific category budgets with calculated spending |
-| GET/POST/DELETE | /api/savings-goals | Create, view and remove savings goals |
-| GET/POST | /api/savings-goals/{goal_id}/contributions | Contribution history and new contributions |
+| GET/POST/PUT/DELETE | /api/savings-goals | Create, view, edit and remove savings goals |
+| GET/POST/DELETE | /api/savings-goals/{goal_id}/contributions | List, record and correct contributions |
 | GET | /api/employer/overview | Employer cohort indicators |
 
 ## Important limitations and security gates
@@ -91,4 +93,4 @@ pip install -r requirements-dev.txt
 pytest -q
 ```
 
-GitHub Actions also runs the test suite on pushes to `main` and pull requests.
+GitHub Actions runs the API tests and checks the browser JavaScript syntax on pushes to `main` and pull requests.
