@@ -8,6 +8,8 @@ FINNAL is an early-stage MVP for MSME employee financial wellness. This public r
 - Create an account using an employer code and sign in.
 - Record income and expenses with category and date.
 - View personal recorded income, expenses, net cash flow and transaction history.
+- Set monthly category budgets; spending is calculated from expense entries in that calendar month, with remaining/over-budget indicators.
+- Create savings goals with optional target dates, add dated contributions, review contribution history and track completion progress.
 
 **Employer**
 - Create a company workspace and first employer-admin account through a bootstrap flow.
@@ -65,14 +67,28 @@ Review current pricing and resource sizing in the Render Dashboard before provis
 | GET | /api/me | Current account |
 | GET/POST | /api/transactions | Employee transaction history/create |
 | GET | /api/overview | Employee cash-flow totals |
+| GET/POST/DELETE | /api/budgets | Month-specific category budgets with calculated spending |
+| GET/POST/DELETE | /api/savings-goals | Create, view and remove savings goals |
+| GET/POST | /api/savings-goals/{goal_id}/contributions | Contribution history and new contributions |
 | GET | /api/employer/overview | Employer cohort indicators |
 
 ## Important limitations and security gates
 
 This is a pilot MVP, not production-certified financial infrastructure. Do not enter real employee or financial data yet.
 
-Not implemented: bank/account-aggregator connections, payroll or HRMS integrations, lending/underwriting, KYC, payment initiation, investment products, money movement, budgets, savings-goal workflows, email verification, password reset, MFA, refresh-token revocation, rate limiting, formal audit logging, database migrations, automated backup/restore drills, or PostgreSQL row-level security. The employer setup route is protected by a generated secret but is not yet a complete one-time provisioning lifecycle.
+Not implemented: bank/account-aggregator connections, payroll or HRMS integrations, lending/underwriting, KYC, payment initiation, investment products, money movement, email verification, password reset, MFA, refresh-token revocation, rate limiting, formal audit logging, database migrations, automated backup/restore drills, or PostgreSQL row-level security. The employer setup route is protected by a generated secret but is not yet a complete one-time provisioning lifecycle.
 
 Before real pilot use, add Alembic migrations, employee invitation/roster verification, stronger account recovery and admin authentication, rate limiting, defence-in-depth tenant isolation with automated cross-tenant tests, privacy/retention/deletion controls, monitoring and security testing. Obtain qualified legal review for relevant Indian privacy, KYC, digital lending, payroll, account-aggregator, payment and investment rules, and use appropriately regulated partners.
 
 Employer analytics suppress small cohorts, but a minimum-size threshold alone does not guarantee anonymity or prevent re-identification. Do not use employer insights for individual employee decisions.
+
+## Tests
+
+Install development dependencies and run the API tests:
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
+
+GitHub Actions also runs the test suite on pushes to `main` and pull requests.
