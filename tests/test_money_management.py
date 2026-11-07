@@ -202,3 +202,39 @@ def test_goal_can_be_edited_and_contribution_corrected():
     assert removed.json()["goal"]["progress_pct"] == 0
 
     assert client.delete(f"/api/savings-goals/{goal_id}", headers=headers).status_code == 200
+
+def test_employer_dashboard_reports_only_cohort_tool_adoption():
+    admin = create_employer("INSIGHTSCO", "admin-insights@example.com")
+    employee_one = create_employee("INSIGHTSCO", "employee-insights-1@example.com")
+    create_employee("INSIGHTSCO", "employee-insights-2@example.com")
+
+    headers = auth(employee_one["access_token"])
+    client.post("/api/budgets", headers=headers, json={
+        "category": "Food", "month": "2026-11", "limit_paise": 50000
+    })
+    client.post("/api/savings-goals", headers=headers, json={
+        "name": "Emergency reserve", "target_paise": 200000
+    })
+
+    response = client.get("/api/employer/overview", headers=auth(admin["access_token"]))
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["suppressed"] is False
+    assert payload["employee_count"] == 2
+    assert payload["employees_with_budgets"] == 1
+    assert payload["budget_adoption_rate"] == 50.0
+    assert payload["employees_with_savings_goals"] == 1
+    assert payload["savings_goal_adoption_rate"] == 50.0
+    assert "email" not in payload
+    assert "individual_records" not in payload
+
+
+def test_employer_insights_are_suppressed_below_minimum_cohort():
+    admin = create_employer("SMALLCO", "admin-small@example.com")
+    create_employee("SMALLCO", "employee-small@example.com")
+    response = client.get("/api/employer/overview", headers=auth(admin["access_token"]))
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["suppressed"] is True
+    assert "budget_adoption_rate" not in payload
+    assert "savings_goal_adoption_rate" not in payload
