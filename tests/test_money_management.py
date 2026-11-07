@@ -1,5 +1,9 @@
 import os
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 TEST_DB = Path(__file__).with_name("finnal_test.db")
 if TEST_DB.exists():
@@ -136,3 +140,65 @@ def test_invalid_month_is_rejected():
     employee = create_employee("DATECO", "employee-date@example.com")
     response = client.get("/api/budgets?month=2026-13", headers=auth(employee["access_token"]))
     assert response.status_code == 422
+
+
+def test_transaction_edit_and_delete_recalculate_budget():
+    create_employer("TXCRUDCO", "admin-txcrud@example.com")
+    employee = create_employee("TXCRUDCO", "employee-txcrud@example.com")
+    headers = auth(employee["access_token"])
+
+    client.post("/api/budgets", headers=headers, json={
+        "category": "Food", "month": "2026-11", "limit_paise": 100000
+    })
+    tx = client.post("/api/transactions", headers=headers, json={
+        "description": "Groceries", "amount_paise": 40000, "kind": "expense",
+        "category": "Food", "occurred_on": "2026-11-07"
+    })
+    transaction_id = tx.json()["id"]
+
+    update = client.put(f"/api/transactions/{transaction_id}", headers=headers, json={
+        "description": "Updated groceries", "amount_paise": 25000, "kind": "expense",
+        "category": "Food", "occurred_on": "2026-11-07"
+    })
+    assert update.status_code == 200
+    budget = client.get("/api/budgets?month=2026-11", headers=headers).json()["budgets"][0]
+    assert budget["spent_paise"] == 25000
+    assert budget["remaining_paise"] == 75000
+
+    deleted = client.delete(f"/api/transactions/{transaction_id}", headers=headers)
+    assert deleted.status_code == 200
+    budget = client.get("/api/budgets?month=2026-11", headers=headers).json()["budgets"][0]
+    assert budget["spent_paise"] == 0
+
+
+def test_goal_can_be_edited_and_contribution_corrected():
+    create_employer("GOALEDITCO", "admin-goaledit@example.com")
+    employee = create_employee("GOALEDITCO", "employee-goaledit@example.com")
+    headers = auth(employee["access_token"])
+
+    created = client.post("/api/savings-goals", headers=headers, json={
+        "name": "Rainy day fund", "target_paise": 100000
+    })
+    goal_id = created.json()["id"]
+    contribution = client.post(f"/api/savings-goals/{goal_id}/contributions",
+        headers=headers, json={"amount_paise": 40000, "note": "Monthly contribution"})
+    assert contribution.status_code == 201
+
+    edited = client.put(f"/api/savings-goals/{goal_id}", headers=headers, json={
+        "name": "Emergency fund", "target_paise": 80000, "due_date": "2027-06-30"
+    })
+    assert edited.status_code == 200
+    assert edited.json()["name"] == "Emergency fund"
+    assert edited.json()["progress_pct"] == 50
+    assert edited.json()["due_date"] == "2027-06-30"
+
+    history = client.get(f"/api/savings-goals/{goal_id}/contributions", headers=headers).json()
+    contribution_id = history["contributions"][0]["id"]
+    removed = client.delete(
+        f"/api/savings-goals/{goal_id}/contributions/{contribution_id}", headers=headers
+    )
+    assert removed.status_code == 200
+    assert removed.json()["goal"]["saved_paise"] == 0
+    assert removed.json()["goal"]["progress_pct"] == 0
+
+    assert client.delete(f"/api/savings-goals/{goal_id}", headers=headers).status_code == 200
